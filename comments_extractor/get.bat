@@ -20,7 +20,7 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-python filter_comments.py "%comments_file%" "%filtered_comments_file%"
+python filter_comments.py "%comments_file%.info.json" "%filtered_comments_file%"
 
 if %ERRORLEVEL% neq 0 (
     echo Error occurred while processing comments with Python.
