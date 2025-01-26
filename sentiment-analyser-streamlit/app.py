@@ -2,6 +2,8 @@ import streamlit as st
 from gensim import corpora
 from gensim.models import LdaModel
 import json
+import random
+import pandas as pd
 import google.generativeai as genai
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
@@ -20,6 +22,9 @@ if 'show_plot' not in st.session_state:
 
 if 'show_trend' not in st.session_state:
     st.session_state.show_trend = True
+
+if 'show_rankings' not in st.session_state:
+    st.session_state.show_rankings = True
 
 
 
@@ -202,6 +207,9 @@ def toggle_data():
 def toggle_plot():
     st.session_state.show_plot = not st.session_state.show_plot
 
+def toggle_ranking():
+    st.session_state.show_rankings = not st.session_state.show_rankings
+
 
     
 youtube_api = st.secrets['YOUTUBE_API_KEY']
@@ -371,7 +379,21 @@ if df is not None:
 
 
 elif ldf is not None:
-    
+    results = []
+    for i, dataf in enumerate(ldf):
+        total_comm = len(dataf)
+        channel, title = vid_info[i]['channel_name'],vid_info[i]['video_title'] 
+        if total_comm == 0:
+            results.append(f"Video {i+1}", 0)
+            continue
+        pos = len(dataf[dataf['sentiment'].str.lower() == 'positive']) / total_comm
+        neu = len(dataf[dataf['sentiment'].str.lower() == 'neutral']) / total_comm
+        neg = len(dataf[dataf['sentiment'].str.lower() == 'negative']) / total_comm
+
+        score = pos - neg
+        #jitter = random.randint(-2,2)
+        #final_score = score + jitter
+        results.append((channel, title, score))
     st.header("Comment Data")
     if st.session_state.show_data:
         col1, col2 = st.columns(2)
@@ -388,3 +410,22 @@ elif ldf is not None:
         
     else:
         st.button('Show Data', on_click=toggle_data)
+    
+    results.sort(key=lambda x: x[1], reverse=False)
+    st.header("Rankings")
+    if st.session_state.show_rankings:
+        table_data = []
+        for idx, (chan, vid_title, sc) in enumerate(results):
+            table_data.append({
+                "Rank": idx + 1,
+                "Channel Name": chan,
+                "Title": vid_title,
+                "Score": round(sc, 2)
+            })
+        
+        df_table = pd.DataFrame(table_data)
+        st.table(df_table)
+        st.button('Hide Rankings', on_click=toggle_ranking)
+
+    else:
+        st.button('Show Rankings', on_click=toggle_ranking)
