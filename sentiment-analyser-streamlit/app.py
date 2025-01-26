@@ -1,6 +1,7 @@
 import streamlit as st
 from gensim import corpora
 from gensim.models import LdaModel
+import json
 import google.generativeai as genai
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
@@ -221,10 +222,11 @@ col.subheader(" -SE Objective 1")
 # video_url = video.text_input("Enter Video URL", help="URL of the YouTube video")
 
 video_url = st.text_input("Enter Video URL", help="URL of the YouTube video")
-
+json_file = st.file_uploader("Or upload a JSON file with youtube links",type = ["json"], help="Json file with youtube urls separated by ',' max 5 links")
 
 
 df = None
+ldf = None
 
 
 
@@ -247,8 +249,26 @@ if video_url:
         st.subheader(f"title: {title}")
 
     except:
-        st.error("please enter a valid link")
+        st.error('please enter a valid link')
 
+elif json_file:
+    data = json.load(json_file)
+    if isinstance(data, list):
+        youtube_links = data
+        ldf = []
+        vid_info = []
+        for link in youtube_links:
+          tdf = cached_scraper(youtube_api, link)
+          tdf['sentiment'] = tdf['english_comm'].apply(get_sentiment)
+          ldf.append(tdf)
+          vid_info.append(get_video_info(link, youtube_api))
+        st.success("Data fetched successfully!")
+
+            
+    else:
+      st.error('Error: The JSON file does not contain a valid array.')
+
+    
 else:
     st.error('Please fill in all the fields.')
 
@@ -259,7 +279,7 @@ else:
 # Display the plot or button based on the visibility state
 if df is not None:
     
-    st.header("Show Data")
+    st.header("Comment Data")
    
 
     if st.session_state.show_data:
@@ -350,5 +370,21 @@ if df is not None:
 
 
 
-else:
-    pass
+elif ldf is not None:
+    
+    st.header("Comment Data")
+    if st.session_state.show_data:
+        col1, col2 = st.columns(2)
+        i = 1
+        for x in ldf:
+            if i % 2 == 1:
+                with col1:
+                    st.write(x)
+            else:
+                with col2:
+                    st.write(x)
+            i-=-1
+        st.button('Hide Data', on_click=toggle_data)
+        
+    else:
+        st.button('Show Data', on_click=toggle_data)
